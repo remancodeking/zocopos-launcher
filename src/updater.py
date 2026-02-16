@@ -332,6 +332,16 @@ class Updater:
 
     def _update_flow(self, local_ver):
         """Check for updates and auto-apply if available."""
+        
+        # If app is already running, we can't update (file locked).
+        # Skip straight to background mode.
+        if is_process_running("ZocoPOS.exe"):
+            print("[Launcher] App is running, skipping update check.")
+            self._set_status("App is running", "Entering background mode...")
+            time.sleep(1)
+            self._launch_app_and_go_background()
+            return
+
         self._set_status("Checking for updates...", f"Current version: {local_ver}")
         self._set_progress_indeterminate()
 
@@ -349,15 +359,15 @@ class Updater:
                 success = self._download_and_install(remote, is_first_time=False)
 
                 if success:
-                    self._set_status(f"Updated to v{remote_ver}")
+                    self._set_status(f"Update OK!", f"Ver: {remote_ver}")
                     self._set_version(remote_ver)
                     self._set_progress(100)
-                    time.sleep(1)
+                    time.sleep(3)  # Show success message for 3 seconds
                     self._launch_app_and_go_background()
                     return
                 else:
-                    self._set_status("Update failed, using current version")
-                    time.sleep(1.5)
+                    self._set_status("Update failed", "Launching current version...")
+                    time.sleep(2)
                     self._launch_app_and_go_background()
                     return
             else:
