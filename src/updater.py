@@ -576,23 +576,30 @@ class Updater:
         }
 
     def _fetch_github_release(self):
-        """Fetch latest release info from GitHub (PUBLIC repo - no token)."""
+        """Fetch latest release info from GitHub (PUBLIC repo - supports Pre-releases)."""
         try:
             # No Auth Headers needed for Public Repos
-            # But adding User-Agent is good practice
             headers = {
                 "User-Agent": "ZocoPOS-Launcher/1.0",
                 "Accept": "application/vnd.github.v3+json"
             }
 
-            resp = requests.get(GITHUB_API_URL, headers=headers, timeout=10)
+            # Use /releases to get list (including pre-releases), take the first one
+            api_url = f"https://api.github.com/repos/{GITHUB_REPO}/releases?per_page=1"
+            resp = requests.get(api_url, headers=headers, timeout=10)
 
             if resp.status_code == 404:
-                print("[GitHub] Repo not found or no releases yet")
+                print("[GitHub] Repo not found")
                 return None
 
             resp.raise_for_status()
-            release = resp.json()
+            releases = resp.json()
+
+            if not releases:
+                print("[GitHub] No releases found")
+                return None
+
+            release = releases[0]  # Get the most recent one
 
             tag = release.get("tag_name", "v0.0.0").lstrip("v")
 
