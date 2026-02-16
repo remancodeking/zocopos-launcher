@@ -5,7 +5,7 @@ echo   ZOCO POS LAUNCHER - BUILD
 echo ========================================
 
 echo Building Launcher EXE...
-pyinstaller --noconsole --onefile --name "%APP_NAME%" ^
+pyinstaller --noconsole --onefile --uac-admin --name "%APP_NAME%" ^
     --icon="assets/icon.png" ^
     --add-data "assets;assets" ^
     --add-data "ui;ui" ^
