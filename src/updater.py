@@ -28,7 +28,7 @@ import requests
 # ======================== CONFIGURATION ========================
 
 # Public Repository where Releases (ZocoPOS.exe and version.json) will be hosted
-GITHUB_REPO = "remancodeking/zocopos-launcher"
+GITHUB_REPO = "remancodeking/zocopos-desktop"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 # ---- TESTING MODE ----
