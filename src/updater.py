@@ -100,44 +100,64 @@ def calculate_sha256(filepath):
     return sha.hexdigest().upper()
 
 
-def create_desktop_shortcut():
-    """Create a desktop shortcut for ZOCO POS."""
+def create_shortcuts():
+    """Create Desktop and Start Menu shortcuts for ZOCO POS."""
     try:
-        # In production (frozen): shortcut → Launcher EXE (handles updates)
-        # In dev/testing: shortcut → installed ZocoPOS.exe (direct launch)
+        # Target is the Launcher EXE (handled by PyInstaller frozen state)
         if getattr(sys, 'frozen', False):
             target_exe = os.path.abspath(sys.executable)
             working_dir = os.path.dirname(target_exe)
         else:
-            target_exe = APP_EXE
+            target_exe = APP_EXE  # Fallback for dev
             working_dir = APP_DIR
 
         if not os.path.exists(target_exe):
-            print(f"[Launcher] Cannot create shortcut: {target_exe} not found")
+            print(f"[Launcher] Shortcut target not found: {target_exe}")
             return False
 
-        desktop = os.path.join(os.environ.get('USERPROFILE', ''), 'Desktop')
-        shortcut_path = os.path.join(desktop, 'ZOCO POS.lnk')
+        # Paths
+        user_profile = os.environ.get('USERPROFILE', '')
+        desktop_dir = os.path.join(user_profile, 'Desktop')
+        start_menu_dir = os.path.join(user_profile, 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Zoco POS')
         
-        # Use the Launcher's own icon for the shortcut (reliable)
+        # Ensure Start Menu folder exists
+        os.makedirs(start_menu_dir, exist_ok=True)
+
+        desktop_lnk = os.path.join(desktop_dir, 'ZOCO POS.lnk')
+        start_menu_lnk = os.path.join(start_menu_dir, 'ZOCO POS.lnk')
+        
+        # Icon source: The Launcher EXE itself
         icon_path = target_exe
 
-        # Write a temp .ps1 script to avoid escaping nightmares
-        ps1_path = os.path.join(UPDATE_DIR, '_create_shortcut.ps1')
+        print(f"[Launcher] Creating shortcuts pointing to: {target_exe}")
+
+        # PowerShell script to create both shortcuts
+        ps1_path = os.path.join(UPDATE_DIR, '_create_shortcuts.ps1')
         os.makedirs(UPDATE_DIR, exist_ok=True)
 
         with open(ps1_path, 'w', encoding='utf-8') as f:
             lines = []
             lines.append('$ws = New-Object -ComObject WScript.Shell')
-            lines.append('$s = $ws.CreateShortcut("' + shortcut_path + '")')
-            lines.append('$s.TargetPath = "' + target_exe + '"')
-            lines.append('$s.WorkingDirectory = "' + working_dir + '"')
-            lines.append('$s.IconLocation = "' + icon_path + ', 0"')
-            lines.append('$s.Description = "ZOCO POS - Point of Sale System"')
-            lines.append('$s.Save()')
+            
+            # Helper function in PS
+            lines.append('function Create-Shortcut($lnkPath, $target, $workDir, $icon) {')
+            lines.append('  $s = $ws.CreateShortcut($lnkPath)')
+            lines.append('  $s.TargetPath = $target')
+            lines.append('  $s.WorkingDirectory = $workDir')
+            lines.append('  $s.IconLocation = "$icon, 0"')
+            lines.append('  $s.Description = "ZOCO POS - Point of Sale System"')
+            lines.append('  $s.Save()')
+            lines.append('}')
+            
+            # Create Desktop Shortcut
+            lines.append(f'Create-Shortcut "{desktop_lnk}" "{target_exe}" "{working_dir}" "{icon_path}"')
+            
+            # Create Start Menu Shortcut
+            lines.append(f'Create-Shortcut "{start_menu_lnk}" "{target_exe}" "{working_dir}" "{icon_path}"')
+            
             f.write(os.linesep.join(lines))
 
-        # Use full path to PowerShell (subprocess may not find it by name alone)
+        # Run PowerShell
         _ps_exe = os.path.join(
             os.environ.get('SYSTEMROOT', r'C:\WINDOWS'),
             'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'
@@ -147,23 +167,24 @@ def create_desktop_shortcut():
 
         result = subprocess.run(
             [_ps_exe, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1_path],
-            capture_output=True, text=True, timeout=10
+            capture_output=True, text=True, timeout=15
         )
 
-        # Clean up temp script
+        # Cleanup
         try:
             os.remove(ps1_path)
         except Exception:
             pass
 
         if result.returncode == 0:
-            print(f"[Launcher] Desktop shortcut created: {shortcut_path}")
+            print("[Launcher] Shortcuts created successfully")
             return True
         else:
-            print(f"[Launcher] Shortcut error: {result.stderr[:200]}")
+            print(f"[Launcher] Shortcut creation failed: {result.stderr[:200]}")
             return False
+
     except Exception as e:
-        print(f"[Launcher] Shortcut creation failed: {e}")
+        print(f"[Launcher] Shortcut error: {e}")
         return False
 
 
@@ -315,9 +336,9 @@ class Updater:
         success = self._download_and_install(self.remote_info, is_first_time=True)
 
         if success:
-            # Create desktop shortcut
-            self._set_status("Creating shortcut...", "Adding to desktop")
-            create_desktop_shortcut()
+            # Create shortcuts (Desktop + Start Menu)
+            self._set_status("Creating shortcuts...", "Adding to Desktop & Menu")
+            create_shortcuts()
             time.sleep(0.5)
 
             self._set_status("Installation complete!", "Launching app...")
@@ -705,6 +726,9 @@ class Updater:
 
     def _launch_app_and_go_background(self):
         """Launch the main app, hide the launcher window, and run background update checks."""
+        # Ensure shortcuts exist on every launch (in case user deleted them or they failed before)
+        create_shortcuts()
+
         try:
             if os.path.exists(APP_EXE):
                 print(f"[Launcher] Starting: {APP_EXE}")
