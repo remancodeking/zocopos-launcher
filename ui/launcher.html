@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZOCO POS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #07070a;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-app-region: drag;
+        }
+
+        /* Animated gradient background */
+        .bg-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+            animation: pulse-glow 4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 400px;
+            padding: 0 30px;
+        }
+
+        /* Logo */
+        .logo-container {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            box-shadow: 0 20px 60px rgba(99,102,241,0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .logo-container img {
+            width: 44px;
+            height: 44px;
+            filter: brightness(10);
+        }
+
+        .logo-fallback {
+            font-size: 28px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: -1px;
+        }
+
+        /* Title */
+        .brand {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+        .brand-name {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #6366f1, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .brand-suffix {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            color: #fff;
+        }
+        .version-tag {
+            font-size: 10px;
+            font-weight: 700;
+            color: #6366f1;
+            background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.2);
+            padding: 3px 10px;
+            border-radius: 100px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Status */
+        .status-area {
+            text-align: center;
+            margin-top: 24px;
+            min-height: 60px;
+        }
+        #status-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: #9ca3af;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        #sub-status {
+            font-size: 10px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-top: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            margin-top: 16px;
+        }
+        .progress-track {
+            width: 100%;
+            height: 4px;
+            background: #1f2937;
+            border-radius: 100px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+            border-radius: 100px;
+            transition: width 0.3s ease;
+        }
+        .progress-fill.indeterminate {
+            width: 30%;
+            animation: slide 1.5s ease-in-out infinite;
+        }
+        @keyframes slide {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+        .progress-label span {
+            font-size: 9px;
+            font-weight: 700;
+            color: #4b5563;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Install Button (shown on first install) */
+        .install-btn {
+            display: none;
+            margin-top: 24px;
+            padding: 14px 48px;
+            background: linear-gradient(135deg, #6366f1, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 30px rgba(99,102,241,0.3);
+            -webkit-app-region: no-drag;
+        }
+        .install-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(99,102,241,0.4);
+        }
+        .install-btn:active {
+            transform: translateY(0);
+        }
+        .install-btn.show { display: block; }
+
+        /* Error state */
+        .error-text {
+            color: #ef4444;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* Retry button */
+        .retry-btn {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 32px;
+            background: transparent;
+            color: #6366f1;
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-app-region: no-drag;
+        }
+        .retry-btn:hover {
+            background: rgba(99,102,241,0.1);
+        }
+        .retry-btn.show { display: block; }
+
+        /* Close button */
+        .close-btn {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.03);
+            color: #4b5563;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 100;
+            -webkit-app-region: no-drag;
+        }
+        .close-btn:hover {
+            background: rgba(239,68,68,0.15);
+            color: #ef4444;
+            border-color: rgba(239,68,68,0.3);
+        }
+
+        /* Bottom info */
+        .footer {
+            position: fixed;
+            bottom: 16px;
+            font-size: 9px;
+            font-weight: 600;
+            color: #374151;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Close Button -->
+    <button class="close-btn" id="close-btn" onclick="closeLauncher()" title="Close">✕</button>
+
+    <div class="bg-glow"></div>
+
+    <div class="container">
+        <!-- Logo -->
+        <div class="logo-container" id="logo-box">
+            <span class="logo-fallback">Z</span>
+        </div>
+
+        <!-- Brand -->
+        <div class="brand">
+            <span class="brand-name">ZOCO</span>
+            <span class="brand-suffix">POS</span>
+        </div>
+        <span class="version-tag" id="version-tag">v0.0.0</span>
+
+        <!-- Status -->
+        <div class="status-area">
+            <div id="status-text">Initializing...</div>
+            <div id="sub-status"></div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-container">
+            <div class="progress-track">
+                <div class="progress-fill indeterminate" id="progress-bar"></div>
+            </div>
+            <div class="progress-label">
+                <span id="progress-left"></span>
+                <span id="progress-right"></span>
+            </div>
+        </div>
+
+        <!-- Install Button (first time) -->
+        <button class="install-btn" id="install-btn" onclick="startInstall()">
+            Install ZOCO POS
+        </button>
+
+        <!-- Retry -->
+        <button class="retry-btn" id="retry-btn" onclick="retryAction()">
+            Retry
+        </button>
+    </div>
+
+    <div class="footer">POWERED BY ZOCOPOS.COM</div>
+
+    <script>
+        // ===== UI Helper Functions (called from Python via pywebview) =====
+
+        function setStatus(text, sub) {
+            document.getElementById('status-text').innerText = text;
+            document.getElementById('sub-status').innerText = sub || '';
+        }
+
+        function setVersion(ver) {
+            document.getElementById('version-tag').innerText = `v${ver}`;
+        }
+
+        function setProgress(percent) {
+            const bar = document.getElementById('progress-bar');
+            bar.classList.remove('indeterminate');
+            bar.style.width = percent + '%';
+        }
+
+        function setProgressIndeterminate() {
+            const bar = document.getElementById('progress-bar');
+            bar.classList.add('indeterminate');
+            bar.style.width = '30%';
+        }
+
+        function setProgressLabel(left, right) {
+            document.getElementById('progress-left').innerText = left || '';
+            document.getElementById('progress-right').innerText = right || '';
+        }
+
+        function showInstallButton() {
+            document.getElementById('install-btn').classList.add('show');
+        }
+
+        function hideInstallButton() {
+            document.getElementById('install-btn').classList.remove('show');
+        }
+
+        function showRetryButton() {
+            document.getElementById('retry-btn').classList.add('show');
+        }
+
+        function hideRetryButton() {
+            document.getElementById('retry-btn').classList.remove('show');
+        }
+
+        function setError(msg) {
+            const el = document.getElementById('status-text');
+            el.innerText = msg;
+            el.classList.add('error-text');
+        }
+
+        function clearError() {
+            document.getElementById('status-text').classList.remove('error-text');
+        }
+
+        // ===== Actions =====
+
+        async function startInstall() {
+            hideInstallButton();
+            clearError();
+            setStatus('Starting installation...');
+            setProgressIndeterminate();
+
+            if (window.pywebview && window.pywebview.api) {
+                await window.pywebview.api.do_install();
+            }
+        }
+
+        async function retryAction() {
+            hideRetryButton();
+            clearError();
+            setStatus('Retrying...');
+            setProgressIndeterminate();
+
+            if (window.pywebview && window.pywebview.api) {
+                await window.pywebview.api.do_retry();
+            }
+        }
+
+        // ===== Close =====
+        async function closeLauncher() {
+            if (window.pywebview && window.pywebview.api) {
+                await window.pywebview.api.close_launcher();
+            }
+        }
+
+        // ===== Init =====
+        window.addEventListener('pywebviewready', async () => {
+            if (window.pywebview && window.pywebview.api) {
+                await window.pywebview.api.on_ui_ready();
+            }
+        });
+    </script>
+</body>
+</html>
