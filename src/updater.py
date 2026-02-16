@@ -132,8 +132,9 @@ def create_shortcuts():
         print(f"[Launcher] Creating shortcuts pointing to: {target_exe}")
 
         # PowerShell script to create both shortcuts
-        ps1_path = os.path.join(UPDATE_DIR, '_create_shortcuts.ps1')
-        os.makedirs(UPDATE_DIR, exist_ok=True)
+        # Use system temp dir to avoid permission issues in Program Files
+        import tempfile
+        ps1_path = os.path.join(tempfile.gettempdir(), '_zoco_shortcut.ps1')
 
         with open(ps1_path, 'w', encoding='utf-8') as f:
             lines = []
@@ -285,7 +286,6 @@ class Updater:
         mode_label = "LOCAL TEST" if LOCAL_MODE else "ONLINE"
         print(f"[Launcher] Mode: {mode_label}")
         print(f"[Launcher] Install Dir: {INSTALL_DIR}")
-        print(f"[Launcher] Data Dir: {APP_DATA_DIR}")
 
         local_ver = get_local_version()
         self._set_version(local_ver)
@@ -294,7 +294,13 @@ class Updater:
         if not installed:
             self._first_time_flow()
         else:
-            self._update_flow(local_ver)
+            # INSTANT LAUNCH MODE
+            # Launch app immediately without waiting for update check
+            print("[Launcher] App found. Launching immediately...")
+            self._set_status("Starting ZocoPOS...", "Please wait...")
+            self._set_progress(100)
+            time.sleep(0.5)
+            self._launch_app_and_go_background()
 
     def _first_time_flow(self):
         """First time installation: show install screen."""
@@ -759,14 +765,13 @@ class Updater:
     def _background_update_loop(self):
         """Run in background: periodically check for updates.
         When an update is found, wait for ZocoPOS.exe to close, then apply it silently."""
+        
+        # Initial delay before first check (let the app start up first)
+        time.sleep(60) 
+
         print(f"[Background] Update monitor started (interval: {BG_CHECK_INTERVAL}s)")
 
         while self._bg_running:
-            time.sleep(BG_CHECK_INTERVAL)
-
-            if not self._bg_running:
-                break
-
             print("[Background] Checking for updates...")
             try:
                 local_ver = get_local_version()
@@ -814,6 +819,8 @@ class Updater:
 
             except Exception as e:
                 print(f"[Background] Error: {e}")
+
+            time.sleep(BG_CHECK_INTERVAL)
 
         print("[Background] Update monitor stopped")
 
