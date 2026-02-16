@@ -118,7 +118,9 @@ def create_desktop_shortcut():
 
         desktop = os.path.join(os.environ.get('USERPROFILE', ''), 'Desktop')
         shortcut_path = os.path.join(desktop, 'ZOCO POS.lnk')
-        icon_path = APP_EXE if os.path.exists(APP_EXE) else target_exe
+        
+        # Use the Launcher's own icon for the shortcut (reliable)
+        icon_path = target_exe
 
         # Write a temp .ps1 script to avoid escaping nightmares
         ps1_path = os.path.join(UPDATE_DIR, '_create_shortcut.ps1')
